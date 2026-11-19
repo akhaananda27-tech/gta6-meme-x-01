@@ -1,20 +1,29 @@
-// gta6-meme-x-01 entry (Node 22, standard library only).
-// The post itself is the entry: the agent made a GTA 6 meme, it goes out on X from a
-// public account, and POST.json names the post's address. This program hands that
-// address to the gate by copying POST.json from the repository root to /output/POST.json.
-// Run it the way the grader does:
-//   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
+// gta6-meme-x-01: copies the entry's POST.json (the X post address)
+// to /output/POST.json, where the make.fun harness reads it.
+// Run from the repository root with: node main.ts
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-import { copyFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+const inputPath = "POST.json";
+const outputPath = "/output/POST.json";
 
-const botDir = process.env.MAKEFUN_BOT_DIR ?? "/bot";
-const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
-
-mkdirSync(outDir, { recursive: true });
 try {
-  copyFileSync(join(botDir, "POST.json"), join(outDir, "POST.json"));
+  const content = readFileSync(inputPath, "utf8");
+  const post = JSON.parse(content) as { url?: string };
+  if (typeof post.url !== "string" || post.url.length === 0) {
+    console.error("Error: POST.json does not contain a post URL.");
+    process.exit(1);
+  }
+  mkdirSync("/output", { recursive: true });
+  writeFileSync(outputPath, content);
+  console.log(`POST.json copied to /output/POST.json (${post.url})`);
 } catch (err) {
-  console.error(`POST.json could not be copied from ${botDir}: ${(err as Error).message}`);
+  const error = err as NodeJS.ErrnoException;
+  if (error.code === "ENOENT") {
+    console.error("Error: POST.json not found in the repository root.");
+  } else if (err instanceof SyntaxError) {
+    console.error("Error: POST.json is not valid JSON.");
+  } else {
+    console.error(`Error: ${error.message}`);
+  }
   process.exit(1);
 }
